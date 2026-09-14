@@ -735,7 +735,8 @@ class AppAgenda(ctk.CTk):
         cuerpo.pack(fill="both", expand=True, padx=10, pady=5)
         cuerpo.grid_columnconfigure(0, weight=3)
         cuerpo.grid_columnconfigure(1, weight=1)
-        cuerpo.grid_rowconfigure(0, weight=1)
+        cuerpo.grid_rowconfigure(0, weight=3)
+        cuerpo.grid_rowconfigure(1, weight=2)
 
 
         tabla_frame = ctk.CTkFrame(cuerpo)
@@ -768,6 +769,14 @@ class AppAgenda(ctk.CTk):
         ctk.CTkButton(form, text="🗑️ Eliminar seleccionada", command=self.eliminar_ubicacion, fg_color="#b33939", hover_color="#8f2d2d").pack(fill="x", padx=10, pady=5)
 
 
+        reporte_frame = ctk.CTkFrame(cuerpo)
+        reporte_frame.grid(row=1, column=0, columnspan=2, sticky="nsew", pady=(10, 0))
+        ctk.CTkLabel(reporte_frame, text="📊 Reporte: recintos más solicitados (RF-10)", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=15, pady=(10, 0))
+        self.tree_reporte_ubicaciones = self.crear_treeview(
+            reporte_frame, ("Ubicación", "Ciudad", "Total de eventos"),
+            (200, 150, 150)
+        )
+        
     def ubicacion_seleccionada_id(self):
         sel = self.tree_ubicaciones.selection()
         return self.tree_ubicaciones.item(sel[0])["values"][0] if sel else None
@@ -856,6 +865,17 @@ class AppAgenda(ctk.CTk):
         except Exception as e:
             print(f"Error cargando ubicaciones: {e}")
 
+        try:
+            reporte = self.ejecutar_consulta(
+                "SELECT nombre, ciudad, total_eventos FROM vista_ranking_ubicaciones",
+                fetch=True
+            )
+            for item in self.tree_reporte_ubicaciones.get_children(): self.tree_reporte_ubicaciones.delete(item)
+            for row in reporte:
+                self.tree_reporte_ubicaciones.insert("", "end", values=row)
+        except Exception as e:
+            print(f"Error cargando reporte de ubicaciones: {e}")
+
     # -------------------- TAREAS --------------------
 
 
@@ -867,7 +887,8 @@ class AppAgenda(ctk.CTk):
         cuerpo.pack(fill="both", expand=True, padx=10, pady=5)
         cuerpo.grid_columnconfigure(0, weight=3)
         cuerpo.grid_columnconfigure(1, weight=1)
-        cuerpo.grid_rowconfigure(0, weight=1)
+        cuerpo.grid_rowconfigure(0, weight=3)
+        cuerpo.grid_rowconfigure(1, weight=2)
 
 
         tabla_frame = ctk.CTkFrame(cuerpo)
@@ -934,6 +955,26 @@ class AppAgenda(ctk.CTk):
 
         self.limpiar_form_tarea()
 
+
+        reporte_frame = ctk.CTkFrame(cuerpo)
+        reporte_frame.grid(row=1, column=0, columnspan=2, sticky="nsew", pady=(10, 0))
+        reporte_frame.grid_columnconfigure(0, weight=1)
+        reporte_frame.grid_columnconfigure(1, weight=1)
+        reporte_frame.grid_rowconfigure(1, weight=1)
+
+
+        ctk.CTkLabel(reporte_frame, text="📊 Carga de trabajo por usuario (RF-16)", font=ctk.CTkFont(size=13, weight="bold")).grid(row=0, column=0, sticky="w", padx=15, pady=(10, 0))
+        ctk.CTkLabel(reporte_frame, text="📊 Tareas activas y vencidas (RF-17)", font=ctk.CTkFont(size=13, weight="bold")).grid(row=0, column=1, sticky="w", padx=15, pady=(10, 0))
+
+
+        frame_carga = ctk.CTkFrame(reporte_frame, fg_color="transparent")
+        frame_carga.grid(row=1, column=0, sticky="nsew", padx=(10, 5))
+        frame_activas = ctk.CTkFrame(reporte_frame, fg_color="transparent")
+        frame_activas.grid(row=1, column=1, sticky="nsew", padx=(5, 10))
+
+
+        self.tree_carga_trabajo = self.crear_treeview(frame_carga, ("Usuario", "Pendientes", "Vencidas"), (160, 90, 90))
+        self.tree_tareas_activas = self.crear_treeview(frame_activas, ("Tarea", "Responsable", "Estado", "Vencida"), (140, 150, 90, 70))
 
     def tarea_seleccionada_id(self):
         sel = self.tree_tareas.selection()
@@ -1051,6 +1092,30 @@ class AppAgenda(ctk.CTk):
             print(f"Error cargando tareas: {e}")
 
 
+        try:
+            carga = self.ejecutar_consulta(
+                "SELECT nombre || ' ' || apellido, tareas_pendientes, tareas_vencidas FROM vista_carga_trabajo_usuarios ORDER BY tareas_vencidas DESC",
+                fetch=True
+            )
+            for item in self.tree_carga_trabajo.get_children(): self.tree_carga_trabajo.delete(item)
+            for row in carga:
+                self.tree_carga_trabajo.insert("", "end", values=row)
+        except Exception as e:
+            print(f"Error cargando carga de trabajo: {e}")
+
+
+        try:
+            activas = self.ejecutar_consulta(
+                "SELECT titulo, nombre || ' ' || apellido, estado, esta_vencida FROM vista_reporte_tareas_activas ORDER BY esta_vencida DESC",
+                fetch=True
+            )
+            for item in self.tree_tareas_activas.get_children(): self.tree_tareas_activas.delete(item)
+            for row in activas:
+                vencida = "Sí" if row[3] else "No"
+                self.tree_tareas_activas.insert("", "end", values=(row[0], row[1], row[2], vencida))
+        except Exception as e:
+            print(f"Error cargando tareas activas: {e}")
+
     # -------------------- DISPONIBILIDAD --------------------
 
 
@@ -1062,7 +1127,8 @@ class AppAgenda(ctk.CTk):
         cuerpo.pack(fill="both", expand=True, padx=10, pady=5)
         cuerpo.grid_columnconfigure(0, weight=3)
         cuerpo.grid_columnconfigure(1, weight=1)
-        cuerpo.grid_rowconfigure(0, weight=1)
+        cuerpo.grid_rowconfigure(0, weight=3)
+        cuerpo.grid_rowconfigure(1, weight=2)
 
 
         tabla_frame = ctk.CTkFrame(cuerpo)
@@ -1116,6 +1182,15 @@ class AppAgenda(ctk.CTk):
 
 
         self.limpiar_form_disponibilidad()
+
+
+        reporte_frame = ctk.CTkFrame(cuerpo)
+        reporte_frame.grid(row=1, column=0, columnspan=2, sticky="nsew", pady=(10, 0))
+        ctk.CTkLabel(reporte_frame, text="📊 Traslapes de horario detectados (RF-12)", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=15, pady=(10, 0))
+        self.tree_traslapes_disp = self.crear_treeview(
+            reporte_frame, ("Usuario", "Fecha", "Franja 1", "Franja 2"),
+            (160, 100, 160, 160)
+        )
 
 
     def disponibilidad_seleccionada_id(self):
@@ -1232,6 +1307,22 @@ class AppAgenda(ctk.CTk):
         except Exception as e:
             print(f"Error cargando disponibilidad: {e}")
 
+
+        try:
+            traslapes = self.ejecutar_consulta("""
+                SELECT u.nombre || ' ' || u.apellido, t.fecha,
+                       t.inicio_1::text || ' - ' || t.fin_1::text,
+                       t.inicio_2::text || ' - ' || t.fin_2::text
+                FROM vista_traslapes_disponibilidad t
+                JOIN usuarios u ON u.id_usuario = t.id_usuario
+                ORDER BY t.fecha
+            """, fetch=True)
+            for item in self.tree_traslapes_disp.get_children(): self.tree_traslapes_disp.delete(item)
+            for row in traslapes:
+                self.tree_traslapes_disp.insert("", "end", values=row)
+        except Exception as e:
+            print(f"Error cargando traslapes de disponibilidad: {e}")
+            
     # -------------------- REFRESCO GENERAL --------------------
 
 
